@@ -1,0 +1,10 @@
+<library path="lib/libvis_streaming_point_cloud">
+    <class name="rviz/StreamingPointCloud2"
+           type="rviz::PointCloud2Display"
+           base_class_type="rviz::Display">
+        <description>
+            Default PointCloud2 Display optimized for high frequency message input (required for streaming clustering).
+        </description>
+        <message_type>sensor_msgs/PointCloud2</message_type>
+    </class>
+</library>
