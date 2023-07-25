@@ -32,7 +32,6 @@
 
 #include <ros/time.h>
 
-#include <rviz/default_plugin/point_cloud_common.h>
 #include <rviz/default_plugin/point_cloud_transformers.h>
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
@@ -40,6 +39,7 @@
 #include <rviz/properties/int_property.h>
 #include <rviz/validate_floats.h>
 
+#include "point_cloud_common.h"
 #include "point_cloud2_display.h"
 
 namespace rviz

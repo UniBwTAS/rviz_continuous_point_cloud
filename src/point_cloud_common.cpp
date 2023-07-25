@@ -50,7 +50,7 @@
 #include <rviz/uniform_string_stream.h>
 #include <rviz/validate_floats.h>
 
-#include <rviz/default_plugin/point_cloud_common.h>
+#include "point_cloud_common.h"
 
 namespace rviz
 {
