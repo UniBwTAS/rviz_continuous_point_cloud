@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RVIZ_POINT_CLOUD2_DISPLAY_H
-#define RVIZ_POINT_CLOUD2_DISPLAY_H
+#ifndef RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H
+#define RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H
 
 #include <sensor_msgs/PointCloud2.h>
 
@@ -37,7 +37,7 @@
 namespace rviz
 {
 class IntProperty;
-class PointCloudCommon;
+class StreamingPointCloudCommon;
 
 /**
  * \class PointCloud2Display
@@ -49,12 +49,12 @@ class PointCloudCommon;
  * g and b
  * all being 8 bits.
  */
-class PointCloud2Display : public MessageFilterDisplay<sensor_msgs::PointCloud2>
+class StreamingPointCloud2Display : public MessageFilterDisplay<sensor_msgs::PointCloud2>
 {
   Q_OBJECT
 public:
-  PointCloud2Display();
-  ~PointCloud2Display() override;
+  StreamingPointCloud2Display();
+  ~StreamingPointCloud2Display() override;
 
   void reset() override;
 
@@ -67,9 +67,9 @@ protected:
   /** @brief Process a single message.  Overridden from MessageFilterDisplay. */
   void processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud) override;
 
-  PointCloudCommon* point_cloud_common_;
+  StreamingPointCloudCommon* point_cloud_common_;
 };
 
 } // namespace rviz
 
-#endif
+#endif // RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H

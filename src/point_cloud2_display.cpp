@@ -44,17 +44,17 @@
 
 namespace rviz
 {
-PointCloud2Display::PointCloud2Display() : point_cloud_common_(new PointCloudCommon(this))
+StreamingPointCloud2Display::StreamingPointCloud2Display() : point_cloud_common_(new StreamingPointCloudCommon(this))
 {
 }
 
-PointCloud2Display::~PointCloud2Display()
+StreamingPointCloud2Display::~StreamingPointCloud2Display()
 {
-  PointCloud2Display::unsubscribe();
+  StreamingPointCloud2Display::unsubscribe();
   delete point_cloud_common_;
 }
 
-void PointCloud2Display::onInitialize()
+void StreamingPointCloud2Display::onInitialize()
 {
   // Use the threaded queue for processing of incoming messages
   update_nh_.setCallbackQueue(context_->getThreadedQueue());
@@ -63,7 +63,7 @@ void PointCloud2Display::onInitialize()
   point_cloud_common_->initialize(context_, scene_node_);
 }
 
-void PointCloud2Display::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void StreamingPointCloud2Display::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   // Filter any nan values out of the cloud.  Any nan values that make it through to PointCloudBase
   // will get their points put off in lala land, but it means they still do get processed/rendered
@@ -156,12 +156,12 @@ void PointCloud2Display::processMessage(const sensor_msgs::PointCloud2ConstPtr& 
 }
 
 
-void PointCloud2Display::update(float wall_dt, float ros_dt)
+void StreamingPointCloud2Display::update(float wall_dt, float ros_dt)
 {
   point_cloud_common_->update(wall_dt, ros_dt);
 }
 
-void PointCloud2Display::reset()
+void StreamingPointCloud2Display::reset()
 {
   MFDClass::reset();
   point_cloud_common_->reset();
@@ -170,4 +170,4 @@ void PointCloud2Display::reset()
 } // namespace rviz
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz::PointCloud2Display, rviz::Display)
+PLUGINLIB_EXPORT_CLASS(rviz::StreamingPointCloud2Display, rviz::Display)

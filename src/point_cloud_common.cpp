@@ -74,14 +74,15 @@ bool operator==(IndexAndMessage a, IndexAndMessage b)
   return a.index == b.index && a.message == b.message;
 }
 
-PointCloudSelectionHandler::PointCloudSelectionHandler(float box_size,
-                                                       PointCloudCommon::CloudInfo* cloud_info,
-                                                       DisplayContext* context)
+StreamingPointCloudSelectionHandler::StreamingPointCloudSelectionHandler(
+    float box_size,
+    StreamingPointCloudCommon::CloudInfo* cloud_info,
+    DisplayContext* context)
   : SelectionHandler(context), cloud_info_(cloud_info), box_size_(box_size)
 {
 }
 
-PointCloudSelectionHandler::~PointCloudSelectionHandler()
+StreamingPointCloudSelectionHandler::~StreamingPointCloudSelectionHandler()
 {
   // delete all the Property objects on our way out.
   QHash<IndexAndMessage, Property*>::const_iterator iter;
@@ -91,7 +92,7 @@ PointCloudSelectionHandler::~PointCloudSelectionHandler()
   }
 }
 
-void PointCloudSelectionHandler::preRenderPass(uint32_t pass)
+void StreamingPointCloudSelectionHandler::preRenderPass(uint32_t pass)
 {
   SelectionHandler::preRenderPass(pass);
 
@@ -108,7 +109,7 @@ void PointCloudSelectionHandler::preRenderPass(uint32_t pass)
   }
 }
 
-void PointCloudSelectionHandler::postRenderPass(uint32_t pass)
+void StreamingPointCloudSelectionHandler::postRenderPass(uint32_t pass)
 {
   SelectionHandler::postRenderPass(pass);
 
@@ -135,7 +136,7 @@ Ogre::Vector3 pointFromCloud(const sensor_msgs::PointCloud2ConstPtr& cloud, uint
   return Ogre::Vector3(x, y, z);
 }
 
-void PointCloudSelectionHandler::createProperties(const Picked& obj, Property* parent_property)
+void StreamingPointCloudSelectionHandler::createProperties(const Picked& obj, Property* parent_property)
 {
   typedef std::set<int> S_int;
   S_int indices;
@@ -208,7 +209,8 @@ void PointCloudSelectionHandler::createProperties(const Picked& obj, Property* p
   }
 }
 
-void PointCloudSelectionHandler::destroyProperties(const Picked& obj, Property* /*parent_property*/)
+void StreamingPointCloudSelectionHandler::destroyProperties(const Picked& obj,
+                                                            Property* /*parent_property*/)
 {
   typedef std::set<int> S_int;
   S_int indices;
@@ -238,7 +240,7 @@ void PointCloudSelectionHandler::destroyProperties(const Picked& obj, Property* 
   }
 }
 
-void PointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aabbs)
+void StreamingPointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aabbs)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -254,7 +256,7 @@ void PointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aabbs)
   }
 }
 
-void PointCloudSelectionHandler::onSelect(const Picked& obj)
+void StreamingPointCloudSelectionHandler::onSelect(const Picked& obj)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -275,7 +277,7 @@ void PointCloudSelectionHandler::onSelect(const Picked& obj)
   }
 }
 
-void PointCloudSelectionHandler::onDeselect(const Picked& obj)
+void StreamingPointCloudSelectionHandler::onDeselect(const Picked& obj)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -287,16 +289,16 @@ void PointCloudSelectionHandler::onDeselect(const Picked& obj)
   }
 }
 
-PointCloudCommon::CloudInfo::CloudInfo() : manager_(nullptr), scene_node_(nullptr)
+StreamingPointCloudCommon::CloudInfo::CloudInfo() : manager_(nullptr), scene_node_(nullptr)
 {
 }
 
-PointCloudCommon::CloudInfo::~CloudInfo()
+StreamingPointCloudCommon::CloudInfo::~CloudInfo()
 {
   clear();
 }
 
-void PointCloudCommon::CloudInfo::clear()
+void StreamingPointCloudCommon::CloudInfo::clear()
 {
   if (scene_node_)
   {
@@ -305,7 +307,7 @@ void PointCloudCommon::CloudInfo::clear()
   }
 }
 
-PointCloudCommon::PointCloudCommon(Display* display)
+StreamingPointCloudCommon::StreamingPointCloudCommon(Display* display)
   : auto_size_(false)
   , new_xyz_transformer_(false)
   , new_color_transformer_(false)
@@ -363,7 +365,7 @@ PointCloudCommon::PointCloudCommon(Display* display)
           SLOT(setColorTransformerOptions(EnumProperty*)));
 }
 
-void PointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scene_node)
+void StreamingPointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scene_node)
 {
   transformer_class_loader_ =
       new pluginlib::ClassLoader<PointCloudTransformer>("rviz", "rviz::PointCloudTransformer");
@@ -378,7 +380,7 @@ void PointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scen
   updateSelectable();
 }
 
-PointCloudCommon::~PointCloudCommon()
+StreamingPointCloudCommon::~StreamingPointCloudCommon()
 {
   // Ensure any threads holding the mutexes have finished
   boost::recursive_mutex::scoped_lock lock1(transformers_mutex_);
@@ -386,7 +388,7 @@ PointCloudCommon::~PointCloudCommon()
   delete transformer_class_loader_;
 }
 
-void PointCloudCommon::loadTransformers()
+void StreamingPointCloudCommon::loadTransformers()
 {
   std::vector<std::string> classes = transformer_class_loader_->getDeclaredClasses();
   std::vector<std::string>::iterator ci;
@@ -421,7 +423,7 @@ void PointCloudCommon::loadTransformers()
   }
 }
 
-void PointCloudCommon::setAutoSize(bool auto_size)
+void StreamingPointCloudCommon::setAutoSize(bool auto_size)
 {
   auto_size_ = auto_size;
   for (unsigned i = 0; i < cloud_infos_.size(); i++)
@@ -431,7 +433,7 @@ void PointCloudCommon::setAutoSize(bool auto_size)
 }
 
 
-void PointCloudCommon::updateAlpha()
+void StreamingPointCloudCommon::updateAlpha()
 {
   for (unsigned i = 0; i < cloud_infos_.size(); i++)
   {
@@ -440,7 +442,7 @@ void PointCloudCommon::updateAlpha()
   }
 }
 
-void PointCloudCommon::updateSelectable()
+void StreamingPointCloudCommon::updateSelectable()
 {
   bool selectable = selectable_property_->getBool();
 
@@ -448,8 +450,8 @@ void PointCloudCommon::updateSelectable()
   {
     for (unsigned i = 0; i < cloud_infos_.size(); i++)
     {
-      cloud_infos_[i]->selection_handler_.reset(
-          new PointCloudSelectionHandler(getSelectionBoxSize(), cloud_infos_[i].get(), context_));
+      cloud_infos_[i]->selection_handler_.reset(new StreamingPointCloudSelectionHandler(
+          getSelectionBoxSize(), cloud_infos_[i].get(), context_));
       cloud_infos_[i]->cloud_->setPickColor(
           SelectionManager::handleToColor(cloud_infos_[i]->selection_handler_->getHandle()));
     }
@@ -464,7 +466,7 @@ void PointCloudCommon::updateSelectable()
   }
 }
 
-void PointCloudCommon::updateStyle()
+void StreamingPointCloudCommon::updateStyle()
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
   if (mode == PointCloud::RM_POINTS)
@@ -484,7 +486,7 @@ void PointCloudCommon::updateStyle()
   updateBillboardSize();
 }
 
-void PointCloudCommon::updateBillboardSize()
+void StreamingPointCloudCommon::updateBillboardSize()
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
   float size;
@@ -504,19 +506,19 @@ void PointCloudCommon::updateBillboardSize()
   context_->queueRender();
 }
 
-void PointCloudCommon::reset()
+void StreamingPointCloudCommon::reset()
 {
   boost::mutex::scoped_lock lock(new_clouds_mutex_);
   cloud_infos_.clear();
   new_cloud_infos_.clear();
 }
 
-void PointCloudCommon::causeRetransform()
+void StreamingPointCloudCommon::causeRetransform()
 {
   needs_retransform_ = true;
 }
 
-void PointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
+void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
 
@@ -607,7 +609,7 @@ void PointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
         cloud_info->scene_node_->attachObject(cloud_info->cloud_.get());
 
         cloud_info->selection_handler_.reset(
-            new PointCloudSelectionHandler(getSelectionBoxSize(), cloud_info.get(), context_));
+            new StreamingPointCloudSelectionHandler(getSelectionBoxSize(), cloud_info.get(), context_));
 
         cloud_infos_.push_back(*it);
       }
@@ -643,7 +645,7 @@ void PointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
   updateStatus();
 }
 
-void PointCloudCommon::setPropertiesHidden(const QList<Property*>& props, bool hide)
+void StreamingPointCloudCommon::setPropertiesHidden(const QList<Property*>& props, bool hide)
 {
   for (int i = 0; i < props.size(); i++)
   {
@@ -651,7 +653,7 @@ void PointCloudCommon::setPropertiesHidden(const QList<Property*>& props, bool h
   }
 }
 
-void PointCloudCommon::updateTransformers(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void StreamingPointCloudCommon::updateTransformers(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   std::string xyz_name = xyz_transformer_property_->getStdString();
   std::string color_name = color_transformer_property_->getStdString();
@@ -721,14 +723,14 @@ void PointCloudCommon::updateTransformers(const sensor_msgs::PointCloud2ConstPtr
   }
 }
 
-void PointCloudCommon::updateStatus()
+void StreamingPointCloudCommon::updateStatus()
 {
   std::stringstream ss;
   // ss << "Showing [" << total_point_count_ << "] points from [" << clouds_.size() << "] messages";
   display_->setStatusStd(StatusProperty::Ok, "Points", ss.str());
 }
 
-void PointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   CloudInfoPtr info(new CloudInfo);
   info->message_ = cloud;
@@ -742,7 +744,7 @@ void PointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cl
   }
 }
 
-void PointCloudCommon::updateXyzTransformer()
+void StreamingPointCloudCommon::updateXyzTransformer()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   if (transformers_.count(xyz_transformer_property_->getStdString()) == 0)
@@ -753,7 +755,7 @@ void PointCloudCommon::updateXyzTransformer()
   causeRetransform();
 }
 
-void PointCloudCommon::updateColorTransformer()
+void StreamingPointCloudCommon::updateColorTransformer()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   if (transformers_.count(color_transformer_property_->getStdString()) == 0)
@@ -765,7 +767,7 @@ void PointCloudCommon::updateColorTransformer()
 }
 
 PointCloudTransformerPtr
-PointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
+StreamingPointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   M_TransformerInfo::iterator it = transformers_.find(xyz_transformer_property_->getStdString());
@@ -782,7 +784,7 @@ PointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2ConstPtr& clou
 }
 
 PointCloudTransformerPtr
-PointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
+StreamingPointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   M_TransformerInfo::iterator it = transformers_.find(color_transformer_property_->getStdString());
@@ -799,7 +801,7 @@ PointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2ConstPtr& cl
 }
 
 
-void PointCloudCommon::retransform()
+void StreamingPointCloudCommon::retransform()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
 
@@ -815,7 +817,7 @@ void PointCloudCommon::retransform()
   }
 }
 
-bool PointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, bool update_transformers)
+bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, bool update_transformers)
 {
   if (!cloud_info->scene_node_)
   {
@@ -935,34 +937,34 @@ bool convertPointCloudToPointCloud2(const sensor_msgs::PointCloud& input,
   return (true);
 }
 
-void PointCloudCommon::addMessage(const sensor_msgs::PointCloudConstPtr& cloud)
+void StreamingPointCloudCommon::addMessage(const sensor_msgs::PointCloudConstPtr& cloud)
 {
   sensor_msgs::PointCloud2Ptr out(new sensor_msgs::PointCloud2);
   convertPointCloudToPointCloud2(*cloud, *out);
   addMessage(out);
 }
 
-void PointCloudCommon::addMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void StreamingPointCloudCommon::addMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   processMessage(cloud);
 }
 
-void PointCloudCommon::fixedFrameChanged()
+void StreamingPointCloudCommon::fixedFrameChanged()
 {
   reset();
 }
 
-void PointCloudCommon::setXyzTransformerOptions(EnumProperty* prop)
+void StreamingPointCloudCommon::setXyzTransformerOptions(EnumProperty* prop)
 {
   fillTransformerOptions(prop, PointCloudTransformer::Support_XYZ);
 }
 
-void PointCloudCommon::setColorTransformerOptions(EnumProperty* prop)
+void StreamingPointCloudCommon::setColorTransformerOptions(EnumProperty* prop)
 {
   fillTransformerOptions(prop, PointCloudTransformer::Support_Color);
 }
 
-void PointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint32_t mask)
+void StreamingPointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint32_t mask)
 {
   prop->clearOptions();
 
@@ -987,7 +989,7 @@ void PointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint32_t mask)
   }
 }
 
-float PointCloudCommon::getSelectionBoxSize()
+float StreamingPointCloudCommon::getSelectionBoxSize()
 {
   if (style_property_->getOptionInt() != PointCloud::RM_POINTS)
   {

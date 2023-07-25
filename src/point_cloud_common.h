@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RVIZ_POINT_CLOUD_COMMON_H
-#define RVIZ_POINT_CLOUD_COMMON_H
+#ifndef RVIZ_STREAMING_POINT_CLOUD_COMMON_H
+#define RVIZ_STREAMING_POINT_CLOUD_COMMON_H
 
 #ifndef Q_MOC_RUN // See: https://bugreports.qt-project.org/browse/QTBUG-22829
 #include <deque>
@@ -64,15 +64,15 @@ class DisplayContext;
 class EnumProperty;
 class FloatProperty;
 struct IndexAndMessage;
-class PointCloudSelectionHandler;
-typedef boost::shared_ptr<PointCloudSelectionHandler> PointCloudSelectionHandlerPtr;
+class StreamingPointCloudSelectionHandler;
+typedef boost::shared_ptr<StreamingPointCloudSelectionHandler> PointCloudSelectionHandlerPtr;
 class PointCloudTransformer;
 typedef boost::shared_ptr<PointCloudTransformer> PointCloudTransformerPtr;
 
 typedef std::vector<std::string> V_string;
 
 /**
- * \class PointCloudCommon
+ * \class StreamingPointCloudCommon
  * \brief Displays a point cloud of type sensor_msgs::PointCloud
  *
  * By default it will assume channel 0 of the cloud is an intensity value, and will color them by
@@ -81,7 +81,7 @@ typedef std::vector<std::string> V_string;
  * g and b
  * all being 8 bits.
  */
-class PointCloudCommon : public QObject
+class StreamingPointCloudCommon : public QObject
 {
   Q_OBJECT
 public:
@@ -115,8 +115,8 @@ public:
   typedef std::queue<CloudInfoPtr> Q_CloudInfo;
   typedef std::list<CloudInfoPtr> L_CloudInfo;
 
-  PointCloudCommon(Display* display);
-  ~PointCloudCommon() override;
+  StreamingPointCloudCommon(Display* display);
+  ~StreamingPointCloudCommon() override;
 
   void initialize(DisplayContext* context, Ogre::SceneNode* scene_node);
 
@@ -210,16 +210,16 @@ private:
   Display* display_;
   DisplayContext* context_;
 
-  friend class PointCloudSelectionHandler;
+  friend class StreamingPointCloudSelectionHandler;
 };
 
-class PointCloudSelectionHandler : public SelectionHandler
+class StreamingPointCloudSelectionHandler : public SelectionHandler
 {
 public:
-  PointCloudSelectionHandler(float box_size,
-                             PointCloudCommon::CloudInfo* cloud_info,
+  StreamingPointCloudSelectionHandler(float box_size,
+                             StreamingPointCloudCommon::CloudInfo* cloud_info,
                              DisplayContext* context);
-  ~PointCloudSelectionHandler() override;
+  ~StreamingPointCloudSelectionHandler() override;
 
   void createProperties(const Picked& obj, Property* parent_property) override;
   void destroyProperties(const Picked& obj, Property* parent_property) override;
@@ -248,11 +248,11 @@ public:
   }
 
 private:
-  PointCloudCommon::CloudInfo* cloud_info_;
+  StreamingPointCloudCommon::CloudInfo* cloud_info_;
   QHash<IndexAndMessage, Property*> property_hash_;
   float box_size_;
 };
 
 } // namespace rviz
 
-#endif // RVIZ_POINT_CLOUD_COMMON_H
+#endif // RVIZ_STREAMING_POINT_CLOUD_COMMON_H
