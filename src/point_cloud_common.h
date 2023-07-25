@@ -97,7 +97,7 @@ public:
 
     Ogre::SceneManager* manager_;
 
-    sensor_msgs::PointCloud2ConstPtr message_;
+    std::vector<sensor_msgs::PointCloud2ConstPtr> message_;
 
     Ogre::SceneNode* scene_node_;
     boost::shared_ptr<PointCloud> cloud_;
@@ -184,6 +184,7 @@ private:
   Ogre::SceneNode* scene_node_;
 
   V_CloudInfo new_cloud_infos_;
+  ros::Time max_stamp;
   boost::mutex new_clouds_mutex_;
 
   L_CloudInfo obsolete_cloud_infos_;

@@ -156,7 +156,7 @@ void StreamingPointCloudSelectionHandler::createProperties(const Picked& obj, Pr
     for (; it != end; ++it)
     {
       int index = *it;
-      const sensor_msgs::PointCloud2ConstPtr& message = cloud_info_->message_;
+      const sensor_msgs::PointCloud2ConstPtr& message = cloud_info_->message_.front();
 
       IndexAndMessage hash_key(index, message.get());
       if (!property_hash_.contains(hash_key))
@@ -230,7 +230,7 @@ void StreamingPointCloudSelectionHandler::destroyProperties(const Picked& obj,
     for (; it != end; ++it)
     {
       int index = *it;
-      const sensor_msgs::PointCloud2ConstPtr& message = cloud_info_->message_;
+      const sensor_msgs::PointCloud2ConstPtr& message = cloud_info_->message_.front();
 
       IndexAndMessage hash_key(index, message.get());
 
@@ -264,7 +264,7 @@ void StreamingPointCloudSelectionHandler::onSelect(const Picked& obj)
   {
     int index = (*it & 0xffffffff) - 1;
 
-    sensor_msgs::PointCloud2ConstPtr message = cloud_info_->message_;
+    sensor_msgs::PointCloud2ConstPtr message = cloud_info_->message_.front();
 
     Ogre::Vector3 pos = cloud_info_->transformed_points_[index].position;
     pos = cloud_info_->scene_node_->convertLocalToWorldPosition(pos);
@@ -437,7 +437,7 @@ void StreamingPointCloudCommon::updateAlpha()
 {
   for (unsigned i = 0; i < cloud_infos_.size(); i++)
   {
-    bool per_point_alpha = findChannelIndex(cloud_infos_[i]->message_, "rgba") != -1;
+    bool per_point_alpha = findChannelIndex(cloud_infos_[i]->message_.front(), "rgba") != -1;
     cloud_infos_[i]->cloud_->setAlpha(alpha_property_->getFloat(), per_point_alpha);
   }
 }
@@ -511,6 +511,7 @@ void StreamingPointCloudCommon::reset()
   boost::mutex::scoped_lock lock(new_clouds_mutex_);
   cloud_infos_.clear();
   new_cloud_infos_.clear();
+  max_stamp = ros::Time(0, 0);
 }
 
 void StreamingPointCloudCommon::causeRetransform()
@@ -521,6 +522,13 @@ void StreamingPointCloudCommon::causeRetransform()
 void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
+
+  if (new_cloud_infos_.size() > 1)
+  {
+    for (int i = 1; i < new_cloud_infos_.size(); i++)
+      new_cloud_infos_[0]->message_.push_back(new_cloud_infos_[i]->message_.front());
+    new_cloud_infos_.resize(1);
+  }
 
   float point_decay_time = decay_time_property_->getFloat();
   if (needs_retransform_)
@@ -541,13 +549,18 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
     boost::mutex::scoped_lock lock(new_clouds_mutex_);
     if (point_decay_time > 0.0 || !new_cloud_infos_.empty())
     {
-      while (!cloud_infos_.empty() &&
-             now_sec - cloud_infos_.front()->receive_time_.toSec() >= point_decay_time)
+      auto it = cloud_infos_.begin();
+      while (it != cloud_infos_.end())
       {
-        cloud_infos_.front()->clear();
-        obsolete_cloud_infos_.push_back(cloud_infos_.front());
-        cloud_infos_.pop_front();
-        context_->queueRender();
+        if ((max_stamp - (*it)->message_.back()->header.stamp).toSec() > point_decay_time)
+        {
+          (*it)->clear();
+          obsolete_cloud_infos_.push_back(std::move(*it));
+          it = cloud_infos_.erase(it);
+          context_->queueRender();
+        }
+        else
+          it++;
       }
     }
   }
@@ -579,19 +592,16 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
 
       V_CloudInfo::iterator it = new_cloud_infos_.begin();
       V_CloudInfo::iterator end = new_cloud_infos_.end();
-      for (; it != end; ++it)
+      if (!new_cloud_infos_.empty())
       {
         CloudInfoPtr cloud_info = *it;
 
-        V_CloudInfo::iterator next = it;
-        next++;
-        // ignore point clouds that are too old, but keep at least one
-        if (next != end && now_sec - cloud_info->receive_time_.toSec() >= point_decay_time)
+        if (cloud_info->transformed_points_.empty())
         {
-          continue;
+          transformCloud(cloud_info, false);
         }
 
-        bool per_point_alpha = findChannelIndex(cloud_info->message_, "rgba") != -1;
+        bool per_point_alpha = findChannelIndex(cloud_info->message_.front(), "rgba") != -1;
 
         cloud_info->cloud_.reset(new PointCloud());
         cloud_info->cloud_->setRenderMode(mode);
@@ -733,15 +743,16 @@ void StreamingPointCloudCommon::updateStatus()
 void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   CloudInfoPtr info(new CloudInfo);
-  info->message_ = cloud;
+  info->message_.push_back(cloud);
   info->receive_time_ = ros::Time::now();
 
-  if (transformCloud(info, true))
-  {
-    boost::mutex::scoped_lock lock(new_clouds_mutex_);
-    new_cloud_infos_.push_back(info);
-    display_->emitTimeSignal(cloud->header.stamp);
-  }
+  updateTransformers(cloud);
+
+  boost::mutex::scoped_lock lock(new_clouds_mutex_);
+  new_cloud_infos_.push_back(info);
+  if (cloud->header.stamp > max_stamp)
+    max_stamp = cloud->header.stamp;
+  display_->emitTimeSignal(cloud->header.stamp);
 }
 
 void StreamingPointCloudCommon::updateXyzTransformer()
@@ -821,12 +832,12 @@ bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, b
 {
   if (!cloud_info->scene_node_)
   {
-    if (!context_->getFrameManager()->getTransform(cloud_info->message_->header, cloud_info->position_,
-                                                   cloud_info->orientation_))
+    if (!context_->getFrameManager()->getTransform(cloud_info->message_.front()->header,
+                                                   cloud_info->position_, cloud_info->orientation_))
     {
       std::stringstream ss;
-      ss << "Failed to transform from frame [" << cloud_info->message_->header.frame_id << "] to frame ["
-         << context_->getFrameManager()->getFixedFrame() << "]";
+      ss << "Failed to transform from frame [" << cloud_info->message_.front()->header.frame_id
+         << "] to frame [" << context_->getFrameManager()->getFixedFrame() << "]";
       display_->setStatusStd(StatusProperty::Error, "Message", ss.str());
       return false;
     }
@@ -835,23 +846,21 @@ bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, b
   Ogre::Matrix4 transform;
   transform.makeTransform(cloud_info->position_, Ogre::Vector3(1, 1, 1), cloud_info->orientation_);
 
-  V_PointCloudPoint& cloud_points = cloud_info->transformed_points_;
-  cloud_points.clear();
-
-  size_t size = cloud_info->message_->width * cloud_info->message_->height;
-  PointCloud::Point default_pt;
-  default_pt.color = Ogre::ColourValue(1, 1, 1);
-  default_pt.position = Ogre::Vector3::ZERO;
-  cloud_points.resize(size, default_pt);
+  V_PointCloudPoint& all_cloud_points = cloud_info->transformed_points_;
+  all_cloud_points.clear();
+  size_t total_size = 0;
+  for (auto& msg : cloud_info->message_)
+    total_size += msg->width * msg->height;
+  all_cloud_points.reserve(total_size);
 
   {
     boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
     if (update_transformers)
     {
-      updateTransformers(cloud_info->message_);
+      updateTransformers(cloud_info->message_.front());
     }
-    PointCloudTransformerPtr xyz_trans = getXYZTransformer(cloud_info->message_);
-    PointCloudTransformerPtr color_trans = getColorTransformer(cloud_info->message_);
+    PointCloudTransformerPtr xyz_trans = getXYZTransformer(cloud_info->message_.front());
+    PointCloudTransformerPtr color_trans = getColorTransformer(cloud_info->message_.front());
 
     if (!xyz_trans)
     {
@@ -869,14 +878,25 @@ bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, b
       return false;
     }
 
-    xyz_trans->transform(cloud_info->message_, PointCloudTransformer::Support_XYZ, transform,
-                         cloud_points);
-    color_trans->transform(cloud_info->message_, PointCloudTransformer::Support_Color, transform,
-                           cloud_points);
+    V_PointCloudPoint cloud_points;
+    for (auto& msg : cloud_info->message_)
+    {
+      cloud_points.clear();
+      size_t size = msg->width * msg->height;
+      PointCloud::Point default_pt;
+      default_pt.color = Ogre::ColourValue(1, 1, 1);
+      default_pt.position = Ogre::Vector3::ZERO;
+      cloud_points.resize(size, default_pt);
+
+      xyz_trans->transform(msg, PointCloudTransformer::Support_XYZ, transform, cloud_points);
+      color_trans->transform(msg, PointCloudTransformer::Support_Color, transform, cloud_points);
+
+      all_cloud_points.insert(all_cloud_points.end(), cloud_points.begin(), cloud_points.end());
+    }
   }
 
-  for (V_PointCloudPoint::iterator cloud_point = cloud_points.begin(); cloud_point != cloud_points.end();
-       ++cloud_point)
+  for (V_PointCloudPoint::iterator cloud_point = all_cloud_points.begin();
+       cloud_point != all_cloud_points.end(); ++cloud_point)
   {
     if (!validateFloats(cloud_point->position))
     {
@@ -975,7 +995,7 @@ void StreamingPointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint3
 
   boost::recursive_mutex::scoped_lock tlock(transformers_mutex_);
 
-  const sensor_msgs::PointCloud2ConstPtr& msg = cloud_infos_.front()->message_;
+  const sensor_msgs::PointCloud2ConstPtr& msg = cloud_infos_.front()->message_.front();
 
   M_TransformerInfo::iterator it = transformers_.begin();
   M_TransformerInfo::iterator end = transformers_.end();
