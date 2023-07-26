@@ -316,11 +316,11 @@ PointCloudCommon::PointCloudCommon(Display* display)
   selectable_property_ =
       new BoolProperty("Selectable", true,
                        "Whether or not the points in this point cloud are selectable.", display_,
-                       &PointCloudCommon::updateSelectable, this);
+                       SLOT(updateSelectable()), this);
 
   style_property_ = new EnumProperty("Style", "Flat Squares",
                                      "Rendering mode to use, in order of computational complexity.",
-                                     display_, &PointCloudCommon::updateStyle, this);
+                                     display_, SLOT(updateStyle()), this);
   style_property_->addOption("Points", PointCloud::RM_POINTS);
   style_property_->addOption("Squares", PointCloud::RM_SQUARES);
   style_property_->addOption("Flat Squares", PointCloud::RM_FLAT_SQUARES);
@@ -328,37 +328,37 @@ PointCloudCommon::PointCloudCommon(Display* display)
   style_property_->addOption("Boxes", PointCloud::RM_BOXES);
 
   point_world_size_property_ = new FloatProperty("Size (m)", 0.01, "Point size in meters.", display_,
-                                                 &PointCloudCommon::updateBillboardSize, this);
+                                                 SLOT(updateBillboardSize()), this);
   point_world_size_property_->setMin(0.0001);
 
   point_pixel_size_property_ = new FloatProperty("Size (Pixels)", 3, "Point size in pixels.", display_,
-                                                 &PointCloudCommon::updateBillboardSize, this);
+                                                 SLOT(updateBillboardSize()), this);
   point_pixel_size_property_->setMin(1);
 
   alpha_property_ = new FloatProperty("Alpha", 1.0,
                                       "Amount of transparency to apply to the points. "
                                       "Note that this is experimental and does not always look correct.",
-                                      display_, &PointCloudCommon::updateAlpha, this);
+                                      display_, SLOT(updateAlpha()), this);
   alpha_property_->setMin(0);
   alpha_property_->setMax(1);
 
   decay_time_property_ = new FloatProperty(
       "Decay Time", 0,
       "Duration, in seconds, to keep the incoming points.  0 means only show the latest points.",
-      display_, &Display::queueRender);
+      display_, SLOT(queueRender()));
   decay_time_property_->setMin(0);
 
   xyz_transformer_property_ =
       new EnumProperty("Position Transformer", "",
                        "Set the transformer to use to set the position of the points.", display_,
-                       &PointCloudCommon::updateXyzTransformer, this);
+                       SLOT(updateXyzTransformer()), this);
   connect(xyz_transformer_property_, &EnumProperty::requestOptions, this,
           &PointCloudCommon::setXyzTransformerOptions);
 
   color_transformer_property_ =
       new EnumProperty("Color Transformer", "",
                        "Set the transformer to use to set the color of the points.", display_,
-                       &PointCloudCommon::updateColorTransformer, this);
+                       SLOT(updateColorTransformer()), this);
   connect(color_transformer_property_, &EnumProperty::requestOptions, this,
           &PointCloudCommon::setColorTransformerOptions);
 }
