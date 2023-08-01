@@ -42,7 +42,7 @@ add_definitions(-DQT_NO_KEYWORDS)
 ## Here we specify the list of source files.
 ## The generated MOC files are included automatically as headers.
 set(SRC_FILES
-        src/point_cloud2_display.cpp src/point_cloud_common.cpp)
+        src/point_cloud2_display.cpp src/point_cloud_common.cpp src/low_latency_message_filter_display.h)
 
 ## An rviz plugin is just a shared library, so here we declare the
 ## library to be called ``${PROJECT_NAME}`` (which is

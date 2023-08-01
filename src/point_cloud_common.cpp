@@ -637,7 +637,8 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
       auto it = cloud_infos_.begin();
       while (it != cloud_infos_.end())
       {
-        if (point_decay_time == 0.0 || (max_stamp - (*it)->message_.back()->header.stamp).toSec() > point_decay_time)
+        if (point_decay_time == 0.0 ||
+            (max_stamp - (*it)->message_.back()->header.stamp).toSec() > point_decay_time)
         {
           (*it)->clear();
           obsolete_cloud_infos_.push_back(std::move(*it));
@@ -988,8 +989,10 @@ bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, b
 {
   if (!cloud_info->scene_node_)
   {
-    if (!context_->getFrameManager()->getTransform(cloud_info->message_.front()->header,
-                                                   cloud_info->position_, cloud_info->orientation_))
+    if (!context_->getFrameManager()->getTransform(
+            cloud_info->message_.front()->header.frame_id,
+            wait_for_transform ? cloud_info->message_.front()->header.stamp : ros::Time(),
+            cloud_info->position_, cloud_info->orientation_))
     {
       std::stringstream ss;
       ss << "Failed to transform from frame [" << cloud_info->message_.front()->header.frame_id

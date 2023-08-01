@@ -127,6 +127,10 @@ public:
 
   void addMessage(const sensor_msgs::PointCloudConstPtr& cloud);
   void addMessage(const sensor_msgs::PointCloud2ConstPtr& cloud);
+  void waitForTransform(bool wait = true)
+  {
+    wait_for_transform = wait;
+  }
 
   Display* getDisplay()
   {
@@ -219,6 +223,7 @@ private:
 
   std::list<sensor_msgs::PointCloud2::Ptr> existing_columns_;
   bool new_message_available{false};
+  bool wait_for_transform{true};
 
   friend class StreamingPointCloudSelectionHandler;
 };

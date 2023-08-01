@@ -34,6 +34,8 @@
 
 #include <rviz/message_filter_display.h>
 
+#include "low_latency_message_filter_display.h"
+
 namespace rviz
 {
 class IntProperty;
@@ -49,7 +51,7 @@ class StreamingPointCloudCommon;
  * g and b
  * all being 8 bits.
  */
-class StreamingPointCloud2Display : public MessageFilterDisplay<sensor_msgs::PointCloud2>
+class StreamingPointCloud2Display : public LowLatencyMessageFilterDisplay<sensor_msgs::PointCloud2>
 {
   Q_OBJECT
 public:
@@ -66,6 +68,7 @@ protected:
 
   /** @brief Process a single message.  Overridden from MessageFilterDisplay. */
   void processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud) override;
+  void updateWaitForTf() override;
 
   StreamingPointCloudCommon* point_cloud_common_;
 };

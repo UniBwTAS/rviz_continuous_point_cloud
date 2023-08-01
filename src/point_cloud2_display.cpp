@@ -59,7 +59,7 @@ void StreamingPointCloud2Display::onInitialize()
   // Use the threaded queue for processing of incoming messages
   update_nh_.setCallbackQueue(context_->getThreadedQueue());
 
-  MFDClass::onInitialize();
+  LLMFDClass::onInitialize();
   point_cloud_common_->initialize(context_, scene_node_);
 }
 
@@ -76,8 +76,14 @@ void StreamingPointCloud2Display::update(float wall_dt, float ros_dt)
 
 void StreamingPointCloud2Display::reset()
 {
-  MFDClass::reset();
+  LLMFDClass::reset();
   point_cloud_common_->reset();
+}
+
+void StreamingPointCloud2Display::updateWaitForTf()
+{
+  LowLatencyMessageFilterDisplay::updateWaitForTf();
+  point_cloud_common_->waitForTransform(wait_for_tf_);
 }
 
 } // namespace rviz
