@@ -59,6 +59,7 @@
 namespace rviz
 {
 class BoolProperty;
+class IntProperty;
 class Display;
 class DisplayContext;
 class EnumProperty;
@@ -142,6 +143,10 @@ public:
   EnumProperty* color_transformer_property_;
   EnumProperty* style_property_;
   FloatProperty* decay_time_property_;
+  BoolProperty* enable_streaming_property_;
+  IntProperty* streaming_max_columns_property_;
+  BoolProperty* streaming_flip_property_;
+  BoolProperty* streaming_upside_down_property_;
 
   void setAutoSize(bool auto_size);
 
@@ -157,6 +162,7 @@ private Q_SLOTS:
   void updateColorTransformer();
   void setXyzTransformerOptions(EnumProperty* prop);
   void setColorTransformerOptions(EnumProperty* prop);
+  void resetForFlip();
 
 private:
   /**
@@ -211,6 +217,9 @@ private:
   Display* display_;
   DisplayContext* context_;
 
+  std::list<sensor_msgs::PointCloud2::Ptr> existing_columns_;
+  bool new_message_available{false};
+
   friend class StreamingPointCloudSelectionHandler;
 };
 
@@ -218,8 +227,8 @@ class StreamingPointCloudSelectionHandler : public SelectionHandler
 {
 public:
   StreamingPointCloudSelectionHandler(float box_size,
-                             StreamingPointCloudCommon::CloudInfo* cloud_info,
-                             DisplayContext* context);
+                                      StreamingPointCloudCommon::CloudInfo* cloud_info,
+                                      DisplayContext* context);
   ~StreamingPointCloudSelectionHandler() override;
 
   void createProperties(const Picked& obj, Property* parent_property) override;

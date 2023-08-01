@@ -47,6 +47,7 @@
 #include <rviz/properties/enum_property.h>
 #include <rviz/properties/float_property.h>
 #include <rviz/properties/vector_property.h>
+#include <rviz/properties/int_property.h>
 #include <rviz/uniform_string_stream.h>
 #include <rviz/validate_floats.h>
 
@@ -363,6 +364,24 @@ StreamingPointCloudCommon::StreamingPointCloudCommon(Display* display)
                        SLOT(updateColorTransformer()), this);
   connect(color_transformer_property_, SIGNAL(requestOptions(EnumProperty*)), this,
           SLOT(setColorTransformerOptions(EnumProperty*)));
+
+  enable_streaming_property_ = new BoolProperty(
+      "Enable streaming", false,
+      "Whether multiple sub-range images (messages) should be accumulated horizontally to display a "
+      "range image. Please choose a criterion for removing old sub-range images.",
+      display_, SLOT(causeRetransform()), this);
+
+  streaming_max_columns_property_ =
+      new IntProperty("Maximum Columns", 0,
+                      "Maximum accumulated number of column of all messages. Zero means disabled.",
+                      enable_streaming_property_, SLOT(causeRetransform()), this);
+
+  streaming_flip_property_ = new BoolProperty("Flip", false, "Flips width and height.",
+                                              enable_streaming_property_, SLOT(resetForFlip()), this);
+
+  streaming_upside_down_property_ =
+      new BoolProperty("Upside Down", false, "Show range image upside down.", enable_streaming_property_,
+                       SLOT(resetForFlip()), this);
 }
 
 void StreamingPointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scene_node)
@@ -512,6 +531,12 @@ void StreamingPointCloudCommon::reset()
   cloud_infos_.clear();
   new_cloud_infos_.clear();
   max_stamp = ros::Time(0, 0);
+  existing_columns_.clear();
+}
+
+void StreamingPointCloudCommon::resetForFlip()
+{
+  reset();
 }
 
 void StreamingPointCloudCommon::causeRetransform()
@@ -523,6 +548,8 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
 
+  // fuse multiple new cloud infos between new and the last update cycle to one cloud info in order not
+  // to generate to many ogre primitives, which can be very slow!
   if (new_cloud_infos_.size() > 1)
   {
     for (int i = 1; i < new_cloud_infos_.size(); i++)
@@ -530,7 +557,65 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
     new_cloud_infos_.resize(1);
   }
 
-  float point_decay_time = decay_time_property_->getFloat();
+  // streaming mode: remove old columns and create a single message
+  if (enable_streaming_property_->getBool())
+  {
+    bool column_removed = false;
+    auto it = existing_columns_.begin();
+    while (existing_columns_.size() > streaming_max_columns_property_->getInt())
+    {
+      column_removed = true;
+      it = existing_columns_.erase(it);
+    }
+
+    if (!existing_columns_.empty() && (column_removed || new_message_available))
+    {
+      // create single message based on columns (important e.g. for min/max of intensity color transformer)
+      auto& first_column = existing_columns_.front();
+      sensor_msgs::PointCloud2Ptr msg(new sensor_msgs::PointCloud2);
+      msg->header = first_column->header;
+      msg->height = first_column->height;
+      msg->width = existing_columns_.size();
+      msg->fields = first_column->fields;
+      msg->is_bigendian = first_column->is_bigendian;
+      msg->point_step = first_column->point_step;
+      msg->row_step = first_column->point_step * msg->width;
+      msg->is_dense = first_column->is_dense;
+      msg->data.resize(msg->width * msg->height * msg->point_step);
+      auto column_it = existing_columns_.begin();
+      for (int column_index = 0; column_index < msg->width; column_index++)
+      {
+        uint8_t* byte_index_dst = msg->data.data() + (column_index * msg->point_step);
+        uint8_t* byte_index_src = (*column_it)->data.data();
+        for (int row_index = 0; row_index < msg->height; row_index++)
+        {
+          memcpy(byte_index_dst, byte_index_src, msg->point_step);
+          byte_index_dst += msg->row_step;
+          byte_index_src += msg->point_step;
+        }
+        column_it++;
+      }
+      new_cloud_infos_.clear();
+
+      CloudInfoPtr info(new CloudInfo);
+      info->message_.emplace_back(msg);
+      info->receive_time_ = ros::Time::now();
+
+      new_cloud_infos_.push_back(info);
+    }
+  }
+  new_message_available = false;
+
+  float point_decay_time;
+  if (enable_streaming_property_->getBool())
+  {
+    point_decay_time = 0;
+    decay_time_property_->setValue(0);
+  }
+  else
+  {
+    point_decay_time = decay_time_property_->getFloat();
+  }
   if (needs_retransform_)
   {
     retransform();
@@ -552,7 +637,7 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
       auto it = cloud_infos_.begin();
       while (it != cloud_infos_.end())
       {
-        if ((max_stamp - (*it)->message_.back()->header.stamp).toSec() > point_decay_time)
+        if (point_decay_time == 0.0 || (max_stamp - (*it)->message_.back()->header.stamp).toSec() > point_decay_time)
         {
           (*it)->clear();
           obsolete_cloud_infos_.push_back(std::move(*it));
@@ -742,17 +827,88 @@ void StreamingPointCloudCommon::updateStatus()
 
 void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-  CloudInfoPtr info(new CloudInfo);
-  info->message_.push_back(cloud);
-  info->receive_time_ = ros::Time::now();
+  if (!enable_streaming_property_->getBool())
+  {
+    existing_columns_.clear();
 
-  updateTransformers(cloud);
+    CloudInfoPtr info(new CloudInfo);
+    info->message_.push_back(cloud);
+    info->receive_time_ = ros::Time::now();
 
-  boost::mutex::scoped_lock lock(new_clouds_mutex_);
-  new_cloud_infos_.push_back(info);
-  if (cloud->header.stamp > max_stamp)
-    max_stamp = cloud->header.stamp;
-  display_->emitTimeSignal(cloud->header.stamp);
+    updateTransformers(cloud);
+
+    boost::mutex::scoped_lock lock(new_clouds_mutex_);
+    new_cloud_infos_.push_back(info);
+    if (cloud->header.stamp > max_stamp)
+      max_stamp = cloud->header.stamp;
+    display_->emitTimeSignal(cloud->header.stamp);
+    return;
+  }
+
+  // check if point cloud is valid otherwise ignore it
+  if (cloud->width == 0 || cloud->height == 0 ||
+      cloud->data.size() != cloud->width * cloud->height * cloud->point_step)
+  {
+    ROS_ERROR("Error in Range Image Visualization: Invalid Message");
+    return;
+  }
+
+  // do not update color transformers too frequently
+  if (existing_columns_.empty())
+    updateTransformers(cloud);
+
+  // split this message into multiple column msgs in order to keep the pipeline afterwards simple
+  // get variables required for rotations
+  bool not_flipped = !streaming_flip_property_->getBool();
+  bool not_upside_down = !streaming_upside_down_property_->getBool();
+  uint32_t width, height, stride_in_src;
+  if (not_flipped)
+  {
+    width = cloud->width;
+    height = cloud->height;
+    stride_in_src = cloud->row_step;
+  }
+  else
+  {
+    width = cloud->height;
+    height = cloud->width;
+    stride_in_src = cloud->point_step;
+  }
+  auto stride_in_dst = static_cast<int32_t>(not_upside_down ? cloud->point_step : -cloud->point_step);
+  // check if height of new columns fits to height of existing range image
+  if (!existing_columns_.empty() && existing_columns_.back()->height != height)
+  {
+    ROS_ERROR("Error in Range Image Visualization: Height of new message does not match existing range "
+              "image. Maybe you have to uncheck 'Streaming' or toggle 'Flip' option.");
+    return;
+  }
+  for (int column_index = 0; column_index < width; column_index++)
+  {
+    sensor_msgs::PointCloud2::Ptr column_msg(new sensor_msgs::PointCloud2());
+    column_msg->header = cloud->header; // TODO: stamp?
+    column_msg->height = height;
+    column_msg->width = 1;
+    column_msg->fields = cloud->fields;
+    column_msg->is_bigendian = cloud->is_bigendian;
+    column_msg->point_step = cloud->point_step;
+    column_msg->row_step = cloud->point_step;
+    column_msg->is_dense = cloud->is_dense;
+
+    column_msg->data.resize(height * cloud->point_step);
+    uint32_t byte_position_src;
+    byte_position_src = not_flipped ? column_index* cloud->point_step :
+                                      byte_position_src = column_index * height * cloud->point_step;
+    uint32_t byte_position_dst = not_upside_down ? 0 : cloud->point_step * (height - 1);
+    for (int row_index = 0; row_index < height; row_index++)
+    {
+      memcpy(column_msg->data.data() + byte_position_dst, cloud->data.data() + byte_position_src,
+             cloud->point_step);
+      byte_position_src += stride_in_src;
+      byte_position_dst += stride_in_dst;
+    }
+    existing_columns_.emplace_back(column_msg);
+    new_message_available = true;
+  }
 }
 
 void StreamingPointCloudCommon::updateXyzTransformer()
