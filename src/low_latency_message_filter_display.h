@@ -102,7 +102,7 @@ protected:
 
   virtual void subscribe()
   {
-    if (!isEnabled())
+    if (!isEnabled() || topic_property_->getStdString().empty())
     {
       return;
     }
