@@ -5,9 +5,8 @@
         Default PointCloud2 Display optimized for high frequency message input (required for continuous clustering).
     </description>
     <maintainer email="andreas.reich@unibw.de">Andreas Reich</maintainer>
-    <license>TODO</license>
-
-    <author>Andreas Reich</author>
+    <author email="andreas.reich@unibw.de">Andreas Reich</author>
+    <license>BSD</license>
 
     <buildtool_depend>catkin</buildtool_depend>
 
@@ -15,7 +14,7 @@
     <depend>rviz</depend>
     <depend>sensor_msgs</depend>
 
-    <exec_depend>vis_point_cloud_transformers</exec_depend>
+    <exec_depend>rviz_colorize_point_cloud_by_label</exec_depend>
 
     <export>
         <rviz plugin="${prefix}/plugin_description.xml"/>
