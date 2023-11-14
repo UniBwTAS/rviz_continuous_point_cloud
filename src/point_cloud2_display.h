@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H
-#define RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H
+#ifndef RVIZ_CONTINUOUS_POINT_CLOUD2_DISPLAY_H
+#define RVIZ_CONTINUOUS_POINT_CLOUD2_DISPLAY_H
 
 #include <sensor_msgs/PointCloud2.h>
 
@@ -39,7 +39,7 @@
 namespace rviz
 {
 class IntProperty;
-class StreamingPointCloudCommon;
+class ContinuousPointCloudCommon;
 
 /**
  * \class PointCloud2Display
@@ -51,12 +51,12 @@ class StreamingPointCloudCommon;
  * g and b
  * all being 8 bits.
  */
-class StreamingPointCloud2Display : public LowLatencyMessageFilterDisplay<sensor_msgs::PointCloud2>
+class ContinuousPointCloud2Display : public LowLatencyMessageFilterDisplay<sensor_msgs::PointCloud2>
 {
   Q_OBJECT
 public:
-  StreamingPointCloud2Display();
-  ~StreamingPointCloud2Display() override;
+  ContinuousPointCloud2Display();
+  ~ContinuousPointCloud2Display() override;
 
   void reset() override;
 
@@ -70,9 +70,9 @@ protected:
   void processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud) override;
   void updateWaitForTf() override;
 
-  StreamingPointCloudCommon* point_cloud_common_;
+  ContinuousPointCloudCommon* point_cloud_common_;
 };
 
 } // namespace rviz
 
-#endif // RVIZ_STREAMING_POINT_CLOUD2_DISPLAY_H
+#endif // RVIZ_CONTINUOUS_POINT_CLOUD2_DISPLAY_H

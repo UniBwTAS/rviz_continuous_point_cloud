@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 11)
 
-project(vis_streaming_point_cloud)
+project(rviz_continuous_point_cloud)
 
 find_package(catkin REQUIRED COMPONENTS
         roscpp

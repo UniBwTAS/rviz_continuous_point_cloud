@@ -75,15 +75,15 @@ bool operator==(IndexAndMessage a, IndexAndMessage b)
   return a.index == b.index && a.message == b.message;
 }
 
-StreamingPointCloudSelectionHandler::StreamingPointCloudSelectionHandler(
+ContinuousPointCloudSelectionHandler::ContinuousPointCloudSelectionHandler(
     float box_size,
-    StreamingPointCloudCommon::CloudInfo* cloud_info,
+    ContinuousPointCloudCommon::CloudInfo* cloud_info,
     DisplayContext* context)
   : SelectionHandler(context), cloud_info_(cloud_info), box_size_(box_size)
 {
 }
 
-StreamingPointCloudSelectionHandler::~StreamingPointCloudSelectionHandler()
+ContinuousPointCloudSelectionHandler::~ContinuousPointCloudSelectionHandler()
 {
   // delete all the Property objects on our way out.
   QHash<IndexAndMessage, Property*>::const_iterator iter;
@@ -93,7 +93,7 @@ StreamingPointCloudSelectionHandler::~StreamingPointCloudSelectionHandler()
   }
 }
 
-void StreamingPointCloudSelectionHandler::preRenderPass(uint32_t pass)
+void ContinuousPointCloudSelectionHandler::preRenderPass(uint32_t pass)
 {
   SelectionHandler::preRenderPass(pass);
 
@@ -110,7 +110,7 @@ void StreamingPointCloudSelectionHandler::preRenderPass(uint32_t pass)
   }
 }
 
-void StreamingPointCloudSelectionHandler::postRenderPass(uint32_t pass)
+void ContinuousPointCloudSelectionHandler::postRenderPass(uint32_t pass)
 {
   SelectionHandler::postRenderPass(pass);
 
@@ -137,7 +137,7 @@ Ogre::Vector3 pointFromCloud(const sensor_msgs::PointCloud2ConstPtr& cloud, uint
   return Ogre::Vector3(x, y, z);
 }
 
-void StreamingPointCloudSelectionHandler::createProperties(const Picked& obj, Property* parent_property)
+void ContinuousPointCloudSelectionHandler::createProperties(const Picked& obj, Property* parent_property)
 {
   typedef std::set<int> S_int;
   S_int indices;
@@ -210,7 +210,7 @@ void StreamingPointCloudSelectionHandler::createProperties(const Picked& obj, Pr
   }
 }
 
-void StreamingPointCloudSelectionHandler::destroyProperties(const Picked& obj,
+void ContinuousPointCloudSelectionHandler::destroyProperties(const Picked& obj,
                                                             Property* /*parent_property*/)
 {
   typedef std::set<int> S_int;
@@ -241,7 +241,7 @@ void StreamingPointCloudSelectionHandler::destroyProperties(const Picked& obj,
   }
 }
 
-void StreamingPointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aabbs)
+void ContinuousPointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aabbs)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -257,7 +257,7 @@ void StreamingPointCloudSelectionHandler::getAABBs(const Picked& obj, V_AABB& aa
   }
 }
 
-void StreamingPointCloudSelectionHandler::onSelect(const Picked& obj)
+void ContinuousPointCloudSelectionHandler::onSelect(const Picked& obj)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -278,7 +278,7 @@ void StreamingPointCloudSelectionHandler::onSelect(const Picked& obj)
   }
 }
 
-void StreamingPointCloudSelectionHandler::onDeselect(const Picked& obj)
+void ContinuousPointCloudSelectionHandler::onDeselect(const Picked& obj)
 {
   S_uint64::iterator it = obj.extra_handles.begin();
   S_uint64::iterator end = obj.extra_handles.end();
@@ -290,16 +290,16 @@ void StreamingPointCloudSelectionHandler::onDeselect(const Picked& obj)
   }
 }
 
-StreamingPointCloudCommon::CloudInfo::CloudInfo() : manager_(nullptr), scene_node_(nullptr)
+ContinuousPointCloudCommon::CloudInfo::CloudInfo() : manager_(nullptr), scene_node_(nullptr)
 {
 }
 
-StreamingPointCloudCommon::CloudInfo::~CloudInfo()
+ContinuousPointCloudCommon::CloudInfo::~CloudInfo()
 {
   clear();
 }
 
-void StreamingPointCloudCommon::CloudInfo::clear()
+void ContinuousPointCloudCommon::CloudInfo::clear()
 {
   if (scene_node_)
   {
@@ -308,7 +308,7 @@ void StreamingPointCloudCommon::CloudInfo::clear()
   }
 }
 
-StreamingPointCloudCommon::StreamingPointCloudCommon(Display* display)
+ContinuousPointCloudCommon::ContinuousPointCloudCommon(Display* display)
   : auto_size_(false)
   , new_xyz_transformer_(false)
   , new_color_transformer_(false)
@@ -365,26 +365,26 @@ StreamingPointCloudCommon::StreamingPointCloudCommon(Display* display)
   connect(color_transformer_property_, SIGNAL(requestOptions(EnumProperty*)), this,
           SLOT(setColorTransformerOptions(EnumProperty*)));
 
-  enable_streaming_property_ = new BoolProperty(
-      "Enable streaming", false,
+  enable_continuous_property_ = new BoolProperty(
+      "Enable continuous", false,
       "Whether multiple sub-range images (messages) should be accumulated horizontally to display a "
       "range image. Please choose a criterion for removing old sub-range images.",
       display_, SLOT(causeRetransform()), this);
 
-  streaming_max_columns_property_ =
+  continuous_max_columns_property_ =
       new IntProperty("Maximum Columns", 0,
                       "Maximum accumulated number of column of all messages. Zero means disabled.",
-                      enable_streaming_property_, SLOT(causeRetransform()), this);
+                      enable_continuous_property_, SLOT(causeRetransform()), this);
 
-  streaming_flip_property_ = new BoolProperty("Flip", false, "Flips width and height.",
-                                              enable_streaming_property_, SLOT(resetForFlip()), this);
+  continuous_flip_property_ = new BoolProperty("Flip", false, "Flips width and height.",
+                                              enable_continuous_property_, SLOT(resetForFlip()), this);
 
-  streaming_upside_down_property_ =
-      new BoolProperty("Upside Down", false, "Show range image upside down.", enable_streaming_property_,
+  continuous_upside_down_property_ =
+      new BoolProperty("Upside Down", false, "Show range image upside down.", enable_continuous_property_,
                        SLOT(resetForFlip()), this);
 }
 
-void StreamingPointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scene_node)
+void ContinuousPointCloudCommon::initialize(DisplayContext* context, Ogre::SceneNode* scene_node)
 {
   transformer_class_loader_ =
       new pluginlib::ClassLoader<PointCloudTransformer>("rviz", "rviz::PointCloudTransformer");
@@ -399,7 +399,7 @@ void StreamingPointCloudCommon::initialize(DisplayContext* context, Ogre::SceneN
   updateSelectable();
 }
 
-StreamingPointCloudCommon::~StreamingPointCloudCommon()
+ContinuousPointCloudCommon::~ContinuousPointCloudCommon()
 {
   // Ensure any threads holding the mutexes have finished
   boost::recursive_mutex::scoped_lock lock1(transformers_mutex_);
@@ -407,7 +407,7 @@ StreamingPointCloudCommon::~StreamingPointCloudCommon()
   delete transformer_class_loader_;
 }
 
-void StreamingPointCloudCommon::loadTransformers()
+void ContinuousPointCloudCommon::loadTransformers()
 {
   std::vector<std::string> classes = transformer_class_loader_->getDeclaredClasses();
   std::vector<std::string>::iterator ci;
@@ -442,7 +442,7 @@ void StreamingPointCloudCommon::loadTransformers()
   }
 }
 
-void StreamingPointCloudCommon::setAutoSize(bool auto_size)
+void ContinuousPointCloudCommon::setAutoSize(bool auto_size)
 {
   auto_size_ = auto_size;
   for (unsigned i = 0; i < cloud_infos_.size(); i++)
@@ -452,7 +452,7 @@ void StreamingPointCloudCommon::setAutoSize(bool auto_size)
 }
 
 
-void StreamingPointCloudCommon::updateAlpha()
+void ContinuousPointCloudCommon::updateAlpha()
 {
   for (unsigned i = 0; i < cloud_infos_.size(); i++)
   {
@@ -461,7 +461,7 @@ void StreamingPointCloudCommon::updateAlpha()
   }
 }
 
-void StreamingPointCloudCommon::updateSelectable()
+void ContinuousPointCloudCommon::updateSelectable()
 {
   bool selectable = selectable_property_->getBool();
 
@@ -469,7 +469,7 @@ void StreamingPointCloudCommon::updateSelectable()
   {
     for (unsigned i = 0; i < cloud_infos_.size(); i++)
     {
-      cloud_infos_[i]->selection_handler_.reset(new StreamingPointCloudSelectionHandler(
+      cloud_infos_[i]->selection_handler_.reset(new ContinuousPointCloudSelectionHandler(
           getSelectionBoxSize(), cloud_infos_[i].get(), context_));
       cloud_infos_[i]->cloud_->setPickColor(
           SelectionManager::handleToColor(cloud_infos_[i]->selection_handler_->getHandle()));
@@ -485,7 +485,7 @@ void StreamingPointCloudCommon::updateSelectable()
   }
 }
 
-void StreamingPointCloudCommon::updateStyle()
+void ContinuousPointCloudCommon::updateStyle()
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
   if (mode == PointCloud::RM_POINTS)
@@ -505,7 +505,7 @@ void StreamingPointCloudCommon::updateStyle()
   updateBillboardSize();
 }
 
-void StreamingPointCloudCommon::updateBillboardSize()
+void ContinuousPointCloudCommon::updateBillboardSize()
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
   float size;
@@ -525,7 +525,7 @@ void StreamingPointCloudCommon::updateBillboardSize()
   context_->queueRender();
 }
 
-void StreamingPointCloudCommon::reset()
+void ContinuousPointCloudCommon::reset()
 {
   boost::mutex::scoped_lock lock(new_clouds_mutex_);
   cloud_infos_.clear();
@@ -534,17 +534,17 @@ void StreamingPointCloudCommon::reset()
   existing_columns_.clear();
 }
 
-void StreamingPointCloudCommon::resetForFlip()
+void ContinuousPointCloudCommon::resetForFlip()
 {
   reset();
 }
 
-void StreamingPointCloudCommon::causeRetransform()
+void ContinuousPointCloudCommon::causeRetransform()
 {
   needs_retransform_ = true;
 }
 
-void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
+void ContinuousPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
 {
   PointCloud::RenderMode mode = (PointCloud::RenderMode)style_property_->getOptionInt();
 
@@ -557,12 +557,12 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
     new_cloud_infos_.resize(1);
   }
 
-  // streaming mode: remove old columns and create a single message
-  if (enable_streaming_property_->getBool())
+  // continuous mode: remove old columns and create a single message
+  if (enable_continuous_property_->getBool())
   {
     bool column_removed = false;
     auto it = existing_columns_.begin();
-    while (existing_columns_.size() > streaming_max_columns_property_->getInt())
+    while (existing_columns_.size() > continuous_max_columns_property_->getInt())
     {
       column_removed = true;
       it = existing_columns_.erase(it);
@@ -607,7 +607,7 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
   new_message_available = false;
 
   float point_decay_time;
-  if (enable_streaming_property_->getBool())
+  if (enable_continuous_property_->getBool())
   {
     point_decay_time = 0;
     decay_time_property_->setValue(0);
@@ -705,7 +705,7 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
         cloud_info->scene_node_->attachObject(cloud_info->cloud_.get());
 
         cloud_info->selection_handler_.reset(
-            new StreamingPointCloudSelectionHandler(getSelectionBoxSize(), cloud_info.get(), context_));
+            new ContinuousPointCloudSelectionHandler(getSelectionBoxSize(), cloud_info.get(), context_));
 
         cloud_infos_.push_back(*it);
       }
@@ -741,7 +741,7 @@ void StreamingPointCloudCommon::update(float /*wall_dt*/, float /*ros_dt*/)
   updateStatus();
 }
 
-void StreamingPointCloudCommon::setPropertiesHidden(const QList<Property*>& props, bool hide)
+void ContinuousPointCloudCommon::setPropertiesHidden(const QList<Property*>& props, bool hide)
 {
   for (int i = 0; i < props.size(); i++)
   {
@@ -749,7 +749,7 @@ void StreamingPointCloudCommon::setPropertiesHidden(const QList<Property*>& prop
   }
 }
 
-void StreamingPointCloudCommon::updateTransformers(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void ContinuousPointCloudCommon::updateTransformers(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   std::string xyz_name = xyz_transformer_property_->getStdString();
   std::string color_name = color_transformer_property_->getStdString();
@@ -819,16 +819,16 @@ void StreamingPointCloudCommon::updateTransformers(const sensor_msgs::PointCloud
   }
 }
 
-void StreamingPointCloudCommon::updateStatus()
+void ContinuousPointCloudCommon::updateStatus()
 {
   std::stringstream ss;
   // ss << "Showing [" << total_point_count_ << "] points from [" << clouds_.size() << "] messages";
   display_->setStatusStd(StatusProperty::Ok, "Points", ss.str());
 }
 
-void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void ContinuousPointCloudCommon::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-  if (!enable_streaming_property_->getBool())
+  if (!enable_continuous_property_->getBool())
   {
     existing_columns_.clear();
 
@@ -860,8 +860,8 @@ void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2Con
 
   // split this message into multiple column msgs in order to keep the pipeline afterwards simple
   // get variables required for rotations
-  bool not_flipped = !streaming_flip_property_->getBool();
-  bool not_upside_down = !streaming_upside_down_property_->getBool();
+  bool not_flipped = !continuous_flip_property_->getBool();
+  bool not_upside_down = !continuous_upside_down_property_->getBool();
   uint32_t width, height, stride_in_src;
   if (not_flipped)
   {
@@ -880,7 +880,7 @@ void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2Con
   if (!existing_columns_.empty() && existing_columns_.back()->height != height)
   {
     ROS_ERROR("Error in Range Image Visualization: Height of new message does not match existing range "
-              "image. Maybe you have to uncheck 'Streaming' or toggle 'Flip' option.");
+              "image. Maybe you have to uncheck 'Continuous' or toggle 'Flip' option.");
     return;
   }
   for (int column_index = 0; column_index < width; column_index++)
@@ -912,7 +912,7 @@ void StreamingPointCloudCommon::processMessage(const sensor_msgs::PointCloud2Con
   }
 }
 
-void StreamingPointCloudCommon::updateXyzTransformer()
+void ContinuousPointCloudCommon::updateXyzTransformer()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   if (transformers_.count(xyz_transformer_property_->getStdString()) == 0)
@@ -923,7 +923,7 @@ void StreamingPointCloudCommon::updateXyzTransformer()
   causeRetransform();
 }
 
-void StreamingPointCloudCommon::updateColorTransformer()
+void ContinuousPointCloudCommon::updateColorTransformer()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   if (transformers_.count(color_transformer_property_->getStdString()) == 0)
@@ -935,7 +935,7 @@ void StreamingPointCloudCommon::updateColorTransformer()
 }
 
 PointCloudTransformerPtr
-StreamingPointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
+ContinuousPointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   M_TransformerInfo::iterator it = transformers_.find(xyz_transformer_property_->getStdString());
@@ -952,7 +952,7 @@ StreamingPointCloudCommon::getXYZTransformer(const sensor_msgs::PointCloud2Const
 }
 
 PointCloudTransformerPtr
-StreamingPointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
+ContinuousPointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
   M_TransformerInfo::iterator it = transformers_.find(color_transformer_property_->getStdString());
@@ -969,7 +969,7 @@ StreamingPointCloudCommon::getColorTransformer(const sensor_msgs::PointCloud2Con
 }
 
 
-void StreamingPointCloudCommon::retransform()
+void ContinuousPointCloudCommon::retransform()
 {
   boost::recursive_mutex::scoped_lock lock(transformers_mutex_);
 
@@ -985,7 +985,7 @@ void StreamingPointCloudCommon::retransform()
   }
 }
 
-bool StreamingPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, bool update_transformers)
+bool ContinuousPointCloudCommon::transformCloud(const CloudInfoPtr& cloud_info, bool update_transformers)
 {
   if (!cloud_info->scene_node_)
   {
@@ -1116,34 +1116,34 @@ bool convertPointCloudToPointCloud2(const sensor_msgs::PointCloud& input,
   return (true);
 }
 
-void StreamingPointCloudCommon::addMessage(const sensor_msgs::PointCloudConstPtr& cloud)
+void ContinuousPointCloudCommon::addMessage(const sensor_msgs::PointCloudConstPtr& cloud)
 {
   sensor_msgs::PointCloud2Ptr out(new sensor_msgs::PointCloud2);
   convertPointCloudToPointCloud2(*cloud, *out);
   addMessage(out);
 }
 
-void StreamingPointCloudCommon::addMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void ContinuousPointCloudCommon::addMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   processMessage(cloud);
 }
 
-void StreamingPointCloudCommon::fixedFrameChanged()
+void ContinuousPointCloudCommon::fixedFrameChanged()
 {
   reset();
 }
 
-void StreamingPointCloudCommon::setXyzTransformerOptions(EnumProperty* prop)
+void ContinuousPointCloudCommon::setXyzTransformerOptions(EnumProperty* prop)
 {
   fillTransformerOptions(prop, PointCloudTransformer::Support_XYZ);
 }
 
-void StreamingPointCloudCommon::setColorTransformerOptions(EnumProperty* prop)
+void ContinuousPointCloudCommon::setColorTransformerOptions(EnumProperty* prop)
 {
   fillTransformerOptions(prop, PointCloudTransformer::Support_Color);
 }
 
-void StreamingPointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint32_t mask)
+void ContinuousPointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint32_t mask)
 {
   prop->clearOptions();
 
@@ -1168,7 +1168,7 @@ void StreamingPointCloudCommon::fillTransformerOptions(EnumProperty* prop, uint3
   }
 }
 
-float StreamingPointCloudCommon::getSelectionBoxSize()
+float ContinuousPointCloudCommon::getSelectionBoxSize()
 {
   if (style_property_->getOptionInt() != PointCloud::RM_POINTS)
   {

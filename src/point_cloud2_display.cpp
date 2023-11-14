@@ -44,17 +44,17 @@
 
 namespace rviz
 {
-StreamingPointCloud2Display::StreamingPointCloud2Display() : point_cloud_common_(new StreamingPointCloudCommon(this))
+ContinuousPointCloud2Display::ContinuousPointCloud2Display() : point_cloud_common_(new ContinuousPointCloudCommon(this))
 {
 }
 
-StreamingPointCloud2Display::~StreamingPointCloud2Display()
+ContinuousPointCloud2Display::~ContinuousPointCloud2Display()
 {
-  StreamingPointCloud2Display::unsubscribe();
+  ContinuousPointCloud2Display::unsubscribe();
   delete point_cloud_common_;
 }
 
-void StreamingPointCloud2Display::onInitialize()
+void ContinuousPointCloud2Display::onInitialize()
 {
   // Use the threaded queue for processing of incoming messages
   update_nh_.setCallbackQueue(context_->getThreadedQueue());
@@ -63,24 +63,24 @@ void StreamingPointCloud2Display::onInitialize()
   point_cloud_common_->initialize(context_, scene_node_);
 }
 
-void StreamingPointCloud2Display::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
+void ContinuousPointCloud2Display::processMessage(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
   point_cloud_common_->addMessage(cloud);
 }
 
 
-void StreamingPointCloud2Display::update(float wall_dt, float ros_dt)
+void ContinuousPointCloud2Display::update(float wall_dt, float ros_dt)
 {
   point_cloud_common_->update(wall_dt, ros_dt);
 }
 
-void StreamingPointCloud2Display::reset()
+void ContinuousPointCloud2Display::reset()
 {
   LLMFDClass::reset();
   point_cloud_common_->reset();
 }
 
-void StreamingPointCloud2Display::updateWaitForTf()
+void ContinuousPointCloud2Display::updateWaitForTf()
 {
   LowLatencyMessageFilterDisplay::updateWaitForTf();
   point_cloud_common_->waitForTransform(wait_for_tf_);
@@ -89,4 +89,4 @@ void StreamingPointCloud2Display::updateWaitForTf()
 } // namespace rviz
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz::StreamingPointCloud2Display, rviz::Display)
+PLUGINLIB_EXPORT_CLASS(rviz::ContinuousPointCloud2Display, rviz::Display)

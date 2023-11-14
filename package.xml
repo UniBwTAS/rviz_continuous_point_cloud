@@ -1,8 +1,8 @@
 <package format="2">
-    <name>vis_streaming_point_cloud</name>
+    <name>rviz_continuous_point_cloud</name>
     <version>0.1.0</version>
     <description>
-        Default PointCloud2 Display optimized for high frequency message input (required for streaming clustering).
+        Default PointCloud2 Display optimized for high frequency message input (required for continuous clustering).
     </description>
     <maintainer email="andreas.reich@unibw.de">Andreas Reich</maintainer>
     <license>TODO</license>

@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RVIZ_STREAMING_POINT_CLOUD_COMMON_H
-#define RVIZ_STREAMING_POINT_CLOUD_COMMON_H
+#ifndef RVIZ_CONTINUOUS_POINT_CLOUD_COMMON_H
+#define RVIZ_CONTINUOUS_POINT_CLOUD_COMMON_H
 
 #ifndef Q_MOC_RUN // See: https://bugreports.qt-project.org/browse/QTBUG-22829
 #include <deque>
@@ -65,15 +65,15 @@ class DisplayContext;
 class EnumProperty;
 class FloatProperty;
 struct IndexAndMessage;
-class StreamingPointCloudSelectionHandler;
-typedef boost::shared_ptr<StreamingPointCloudSelectionHandler> PointCloudSelectionHandlerPtr;
+class ContinuousPointCloudSelectionHandler;
+typedef boost::shared_ptr<ContinuousPointCloudSelectionHandler> PointCloudSelectionHandlerPtr;
 class PointCloudTransformer;
 typedef boost::shared_ptr<PointCloudTransformer> PointCloudTransformerPtr;
 
 typedef std::vector<std::string> V_string;
 
 /**
- * \class StreamingPointCloudCommon
+ * \class ContinuousPointCloudCommon
  * \brief Displays a point cloud of type sensor_msgs::PointCloud
  *
  * By default it will assume channel 0 of the cloud is an intensity value, and will color them by
@@ -82,7 +82,7 @@ typedef std::vector<std::string> V_string;
  * g and b
  * all being 8 bits.
  */
-class StreamingPointCloudCommon : public QObject
+class ContinuousPointCloudCommon : public QObject
 {
   Q_OBJECT
 public:
@@ -116,8 +116,8 @@ public:
   typedef std::queue<CloudInfoPtr> Q_CloudInfo;
   typedef std::list<CloudInfoPtr> L_CloudInfo;
 
-  StreamingPointCloudCommon(Display* display);
-  ~StreamingPointCloudCommon() override;
+  ContinuousPointCloudCommon(Display* display);
+  ~ContinuousPointCloudCommon() override;
 
   void initialize(DisplayContext* context, Ogre::SceneNode* scene_node);
 
@@ -147,10 +147,10 @@ public:
   EnumProperty* color_transformer_property_;
   EnumProperty* style_property_;
   FloatProperty* decay_time_property_;
-  BoolProperty* enable_streaming_property_;
-  IntProperty* streaming_max_columns_property_;
-  BoolProperty* streaming_flip_property_;
-  BoolProperty* streaming_upside_down_property_;
+  BoolProperty* enable_continuous_property_;
+  IntProperty* continuous_max_columns_property_;
+  BoolProperty* continuous_flip_property_;
+  BoolProperty* continuous_upside_down_property_;
 
   void setAutoSize(bool auto_size);
 
@@ -225,16 +225,16 @@ private:
   bool new_message_available{false};
   bool wait_for_transform{true};
 
-  friend class StreamingPointCloudSelectionHandler;
+  friend class ContinuousPointCloudSelectionHandler;
 };
 
-class StreamingPointCloudSelectionHandler : public SelectionHandler
+class ContinuousPointCloudSelectionHandler : public SelectionHandler
 {
 public:
-  StreamingPointCloudSelectionHandler(float box_size,
-                                      StreamingPointCloudCommon::CloudInfo* cloud_info,
+  ContinuousPointCloudSelectionHandler(float box_size,
+                                      ContinuousPointCloudCommon::CloudInfo* cloud_info,
                                       DisplayContext* context);
-  ~StreamingPointCloudSelectionHandler() override;
+  ~ContinuousPointCloudSelectionHandler() override;
 
   void createProperties(const Picked& obj, Property* parent_property) override;
   void destroyProperties(const Picked& obj, Property* parent_property) override;
@@ -263,11 +263,11 @@ public:
   }
 
 private:
-  StreamingPointCloudCommon::CloudInfo* cloud_info_;
+  ContinuousPointCloudCommon::CloudInfo* cloud_info_;
   QHash<IndexAndMessage, Property*> property_hash_;
   float box_size_;
 };
 
 } // namespace rviz
 
-#endif // RVIZ_STREAMING_POINT_CLOUD_COMMON_H
+#endif // RVIZ_CONTINUOUS_POINT_CLOUD_COMMON_H
